@@ -1,4 +1,4 @@
-object DataModule1: TDataModule1
+object dmRules: TdmRules
   OldCreateOrder = False
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy

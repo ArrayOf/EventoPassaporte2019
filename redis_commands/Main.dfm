@@ -1,22 +1,22 @@
-object Form1: TForm1
+object fMain: TfMain
   Left = 0
   Top = 0
   Caption = 
-    'Exemplo - Palestra Geolocaliza'#231#227'o com Redis - Delphi Squad POA 2' +
-    '019'
+    'Exemplo - Palestra Geolocaliza'#231#227'o com Redis - Evento Passaporte ' +
+    '2019'
   ClientHeight = 638
   ClientWidth = 993
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -11
-  Font.Name = 'Tahoma'
+  Font.Height = -13
+  Font.Name = 'Segoe UI'
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
   PixelsPerInch = 96
-  TextHeight = 13
+  TextHeight = 17
   object Panel4: TPanel
     Left = 0
     Top = 0
@@ -27,9 +27,9 @@ object Form1: TForm1
     ShowCaption = False
     TabOrder = 0
     object Panel1: TPanel
-      Left = 169
+      Left = 209
       Top = 1
-      Width = 823
+      Width = 783
       Height = 561
       Align = alClient
       BevelOuter = bvNone
@@ -40,7 +40,7 @@ object Form1: TForm1
         AlignWithMargins = True
         Left = 3
         Top = 3
-        Width = 817
+        Width = 777
         Height = 555
         ActivePage = TabSheet1
         Align = alClient
@@ -50,14 +50,14 @@ object Form1: TForm1
           object ImageMapa: TImage
             Left = 0
             Top = 0
-            Width = 809
-            Height = 527
+            Width = 769
+            Height = 523
             Align = alClient
             Center = True
-            ExplicitLeft = 208
-            ExplicitTop = 144
-            ExplicitWidth = 105
-            ExplicitHeight = 105
+            ExplicitLeft = -1
+            ExplicitTop = 2
+            ExplicitWidth = 793
+            ExplicitHeight = 527
           end
         end
         object TabSheet2: TTabSheet
@@ -66,8 +66,8 @@ object Form1: TForm1
           object Memo1: TMemo
             Left = 0
             Top = 0
-            Width = 809
-            Height = 527
+            Width = 769
+            Height = 523
             Align = alClient
             Color = clGreen
             Font.Charset = DEFAULT_CHARSET
@@ -86,7 +86,7 @@ object Form1: TForm1
     object Panel3: TPanel
       Left = 1
       Top = 1
-      Width = 168
+      Width = 208
       Height = 561
       Align = alLeft
       BevelInner = bvLowered
@@ -96,34 +96,31 @@ object Form1: TForm1
       object Button1: TButton
         Left = 8
         Top = 6
-        Width = 145
+        Width = 185
         Height = 25
-        Caption = 'MAPA MUNDI'
+        Action = ActionMapaMundi
         TabOrder = 0
-        OnClick = Button1Click
       end
       object Button2: TButton
         Left = 8
         Top = 37
-        Width = 145
+        Width = 185
         Height = 25
-        Caption = 'ONDE ESTAMOS?'
+        Action = ActionOndeEstamos
         TabOrder = 1
-        OnClick = Button2Click
       end
       object Button5: TButton
         Left = 8
         Top = 88
-        Width = 145
+        Width = 185
         Height = 25
-        Caption = 'INSERIR PARADAS'
+        Action = ActionInserirEstabelecimentos
         TabOrder = 2
-        OnClick = Button5Click
       end
       object Button4: TButton
         Left = 8
-        Top = 376
-        Width = 145
+        Top = 224
+        Width = 185
         Height = 25
         Caption = 'ABRIR SERVIDOR DS'
         TabOrder = 3
@@ -132,20 +129,18 @@ object Form1: TForm1
       object Button6: TButton
         Left = 8
         Top = 150
-        Width = 145
+        Width = 185
         Height = 25
         Caption = 'CONSULTAR'
         TabOrder = 4
-        OnClick = Button6Click
       end
       object Button7: TButton
         Left = 8
         Top = 119
-        Width = 145
+        Width = 185
         Height = 25
-        Caption = 'LISTAR LINHAS'
+        Caption = 'LISTAR ESTABELECIMENTOS'
         TabOrder = 5
-        OnClick = Button7Click
       end
     end
   end
@@ -751,30 +746,30 @@ object Form1: TForm1
       Left = 9
       Top = 40
       Width = 288
-      Height = 21
+      Height = 25
       Alignment = taCenter
-      EditLabel.Width = 175
-      EditLabel.Height = 13
+      EditLabel.Width = 215
+      EditLabel.Height = 17
       EditLabel.Caption = 'Chave de API do Google Maps Static'
       TabOrder = 0
-      Text = 'AIzaSyDxZv3XIiP6Yb8rSfxOfhWlgyETb0AZ15g'
+      Text = '- CRIE A SUA PR'#211'PRIA API KEY -'
       OnChange = LabeledEdit1Change
     end
     object LabeledEdit2: TLabeledEdit
       Left = 320
       Top = 40
-      Width = 328
-      Height = 21
+      Width = 416
+      Height = 25
       Alignment = taCenter
-      EditLabel.Width = 78
-      EditLabel.Height = 13
+      EditLabel.Width = 96
+      EditLabel.Height = 17
       EditLabel.Caption = 'Acesso ao Redis'
       TabOrder = 1
       Text = 'localhost:6379'
       OnChange = LabeledEdit2Change
     end
     object Button3: TButton
-      Left = 654
+      Left = 742
       Top = 38
       Width = 75
       Height = 25
@@ -787,7 +782,23 @@ object Form1: TForm1
     Enabled = False
     Interval = 1500
     OnTimer = Timer1Timer
-    Left = 32
-    Top = 492
+    Left = 48
+    Top = 468
+  end
+  object ActionList1: TActionList
+    Left = 48
+    Top = 408
+    object ActionMapaMundi: TAction
+      Caption = 'MAPA MUNDI'
+      OnExecute = ActionMapaMundiExecute
+    end
+    object ActionOndeEstamos: TAction
+      Caption = 'ONDE ESTAMOS?'
+      OnExecute = ActionOndeEstamosExecute
+    end
+    object ActionInserirEstabelecimentos: TAction
+      Caption = 'INSERIR ESTABELECIMENTOS'
+      OnExecute = ActionInserirEstabelecimentosExecute
+    end
   end
 end

@@ -16,10 +16,12 @@ uses
   Vcl.StdCtrls,
   Vcl.Imaging.pngimage,
   Vcl.ExtCtrls,
-  Vcl.ComCtrls;
+  Vcl.ComCtrls,
+  System.Actions,
+  Vcl.ActnList;
 
 type
-  TForm1 = class(TForm)
+  TfMain = class(TForm)
     Panel1: TPanel;
     Panel2: TPanel;
     Image1: TImage;
@@ -40,18 +42,19 @@ type
     Button4: TButton;
     Button6: TButton;
     Button7: TButton;
-    procedure Button1Click(Sender: TObject);
+    ActionList1: TActionList;
+    ActionMapaMundi: TAction;
+    ActionOndeEstamos: TAction;
+    ActionInserirEstabelecimentos: TAction;
     procedure FormCreate(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
-    procedure Button5Click(Sender: TObject);
     procedure LabeledEdit1Change(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure LabeledEdit2Change(Sender: TObject);
     procedure Button4Click(Sender: TObject);
-    procedure Button6Click(Sender: TObject);
-    procedure Button7Click(Sender: TObject);
-    procedure Button8Click(Sender: TObject);
+    procedure ActionMapaMundiExecute(Sender: TObject);
+    procedure ActionOndeEstamosExecute(Sender: TObject);
+    procedure ActionInserirEstabelecimentosExecute(Sender: TObject);
   private
     { Private declarations }
     FLoadTask: ITask;
@@ -61,7 +64,7 @@ type
   end;
 
 var
-  Form1: TForm1;
+  fMain: TfMain;
 
 implementation
 
@@ -69,10 +72,19 @@ implementation
 
 uses
   Rules,
-  Vcl.Imaging.jpeg,
-  LoadEPTCData;
+  Vcl.Imaging.jpeg;
 
-procedure TForm1.Button1Click(Sender: TObject);
+procedure TfMain.ActionInserirEstabelecimentosExecute(Sender: TObject);
+begin
+  Screen.Cursor := crHourGlass;
+  try
+    dmRules.LoadDataSet;
+  finally
+    Screen.Cursor := crDefault;
+  end;
+end;
+
+procedure TfMain.ActionMapaMundiExecute(Sender: TObject);
 var
   oResponse: TStringStream;
 begin
@@ -82,7 +94,7 @@ begin
   Self.PageControl1.ActivePageIndex := 0;
 
   try
-    oResponse := DataModule1.GetMap;
+    oResponse := dmRules.GetMap;
     Self.ShowMap(oResponse);
   finally
     oResponse.Free;
@@ -90,7 +102,7 @@ begin
   end;
 end;
 
-procedure TForm1.Button2Click(Sender: TObject);
+procedure TfMain.ActionOndeEstamosExecute(Sender: TObject);
 var
   oResponse: TStringStream;
 begin
@@ -100,7 +112,7 @@ begin
   Self.PageControl1.ActivePageIndex := 0;
 
   try
-    oResponse := DataModule1.WhereAreWe;
+    oResponse := dmRules.WhereAreWe;
     Self.ShowMap(oResponse);
   finally
     oResponse.Free;
@@ -108,13 +120,13 @@ begin
   end;
 end;
 
-procedure TForm1.Button3Click(Sender: TObject);
+procedure TfMain.Button3Click(Sender: TObject);
 var
   bRet: Boolean;
 begin
   Screen.Cursor := crHourGlass;
 
-  bRet := DataModule1.TestRedis;
+  bRet := dmRules.TestRedis;
   if bRet then
   begin
     MessageBox(Self.Handle, 'O Redis está acessível!', 'Atenção!', MB_ICONINFORMATION + MB_OK);
@@ -125,96 +137,36 @@ begin
   Screen.Cursor := crDefault;
 end;
 
-procedure TForm1.Button4Click(Sender: TObject);
+procedure TfMain.Button4Click(Sender: TObject);
 begin
-  DataModule1.ActiveServer;
+  dmRules.ActiveServer;
   Self.Button4.Enabled := False;
 end;
 
-procedure TForm1.Button5Click(Sender: TObject);
-var
-  maLog: TProcessLine;
-begin
-  Self.PageControl1.ActivePageIndex := 1;
-  Self.Memo1.Clear;
-
-  maLog := procedure(const ALine: string)
-    begin
-      Self.Memo1.Lines.Add(ALine);
-    end;
-
-  Self.FLoadTask := DataModule1.LoadEPTC(maLog);
-
-  Self.Button5.Enabled := False;
-  Self.Timer1.Enabled  := True;
-
-  Application.ProcessMessages;
-end;
-
-procedure TForm1.Button6Click(Sender: TObject);
-var
-  oResponse: TStringStream;
-begin
-  Screen.Cursor := crHourGlass;
-  oResponse     := nil;
-
-  Self.PageControl1.ActivePageIndex := 0;
-
-  try
-    oResponse := DataModule1.GetNearbyBusStop('244-1');
-    Self.ShowMap(oResponse);
-  finally
-    oResponse.Free;
-    Screen.Cursor := crDefault;
-  end;
-end;
-
-procedure TForm1.Button7Click(Sender: TObject);
-var
-  aBuffer: TArray<string>;
-  sLine  : string;
-begin
-  Screen.Cursor := crHourGlass;
-  try
-    Self.PageControl1.ActivePageIndex := 1;
-    Self.Memo1.Clear;
-
-    aBuffer := DataModule1.BusList;
-
-    for sLine in aBuffer do
-    begin
-      Self.Memo1.Lines.Add(sLine);
-    end;
-  finally
-    Screen.Cursor := crDefault;
-  end;
-end;
-
-
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TfMain.FormCreate(Sender: TObject);
 begin
   ReportMemoryLeaksOnShutdown     := True;
   FormatSettings.DecimalSeparator := '.';
 
   Self.FLoadTask := nil;
 
-  Self.LabeledEdit1.Text := DataModule1.GoogleAPIKey;
-  Self.LabeledEdit2.Text := DataModule1.RedisHostPort;
+  Self.LabeledEdit1.Text := dmRules.GoogleAPIKey;
+  Self.LabeledEdit2.Text := dmRules.RedisHostPort;
 
   Self.PageControl1.ActivePageIndex := 0;
 end;
 
-procedure TForm1.LabeledEdit1Change(Sender: TObject);
+procedure TfMain.LabeledEdit1Change(Sender: TObject);
 begin
-  DataModule1.GoogleAPIKey := Self.LabeledEdit1.Text;
+  dmRules.GoogleAPIKey := Self.LabeledEdit1.Text;
 end;
 
-procedure TForm1.LabeledEdit2Change(Sender: TObject);
+procedure TfMain.LabeledEdit2Change(Sender: TObject);
 begin
-  DataModule1.RedisHostPort := Self.LabeledEdit2.Text;
+  dmRules.RedisHostPort := Self.LabeledEdit2.Text;
 end;
 
-procedure TForm1.ShowMap(AContent: TStringStream);
+procedure TfMain.ShowMap(AContent: TStringStream);
 var
   oJPG: TJPEGImage;
   oBMP: TBitmap;
@@ -231,7 +183,7 @@ begin
   oBMP.Free;
 end;
 
-procedure TForm1.Timer1Timer(Sender: TObject);
+procedure TfMain.Timer1Timer(Sender: TObject);
 begin
   Self.Timer1.Enabled := False;
 

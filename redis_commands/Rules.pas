@@ -18,8 +18,6 @@ uses
   Datasnap.DSHTTP,
   Datasnap.DSServer,
 
-  LoadEPTCData,
-
   Redis.Client,
   Redis.Commons,
   Redis.NetLib.INDY
@@ -29,15 +27,14 @@ uses
 type
 
 {$METHODINFO ON}
-  TStopBus = class(TComponent)
+  TEstabelecimentos = class(TComponent)
   public
-    function HelloWorld: string;
-    function BusHunter(const ALine: string; const ALatitude: string; const ALongitude: string): TJSONObject;
-    function BusList: TJSONArray;
+    function OlaMundo: string;
+    function OndeVamos(const ALatitude: string; const ALongitude: string): TJSONArray;
   end;
 {$METHODINFO OFF}
 
-  TDataModule1 = class(TDataModule)
+  TdmRules = class(TDataModule)
     RESTClient1: TRESTClient;
     RESTRequest1: TRESTRequest;
     RESTResponse1: TRESTResponse;
@@ -50,32 +47,30 @@ type
     procedure DataModuleDestroy(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
   private const
-    FDelphiSquadLat = -30.0428357;
-    FDelphiSquadLng = -51.2188929;
+    FEventoPassaporteLat = -23.5708384;
+    FEventoPassaporteLng = -46.6576912;
   private
     FRedisHost    : string;
     FRedisPort    : Integer;
     FRedisHostPort: string;
     function GetGoogleAPIKey: string;
     procedure SetGoogleAPIKey(const Value: string);
-    procedure SetRedisHostPort(const Value: string);
+    procedure SetRedisHostPort(AValue: string);
     procedure LoadCFGFromINI;
     procedure SaveCFGToINI;
   public
     function TestRedis: Boolean;
     function GetMap: TStringStream;
     function WhereAreWe: TStringStream;
-    function LoadEPTC(ALog: TProcessLine): ITask;
-    function GetNearbyBusStop(const ALine: string): TStringStream;
-    function BusList: TArray<string>;
     procedure ActiveServer;
+    procedure LoadDataSet;
   published
     property GoogleAPIKey : string read GetGoogleAPIKey write SetGoogleAPIKey;
     property RedisHostPort: string read FRedisHostPort write SetRedisHostPort;
   end;
 
 var
-  DataModule1: TDataModule1;
+  dmRules: TdmRules;
 
 implementation
 
@@ -84,49 +79,37 @@ implementation
 uses
   System.IniFiles,
   Main,
-  QueryEPTC;
+  Redis.Values;
 
 {$R *.dfm}
 { TDataModule1 }
 
-procedure TDataModule1.ActiveServer;
+procedure TdmRules.ActiveServer;
 begin
   Self.DSServer1.Start;
 end;
 
-function TDataModule1.BusList: TArray<string>;
-var
-  oQuery: TQueryEPTC;
-begin
-  oQuery := TQueryEPTC.Create(Self.FRedisHost, Self.FRedisPort);
-  try
-    Result := oQuery.BusList;
-  finally
-    oQuery.Free;
-  end;
-end;
-
-procedure TDataModule1.DataModuleCreate(Sender: TObject);
+procedure TdmRules.DataModuleCreate(Sender: TObject);
 begin
   Self.LoadCFGFromINI;
 end;
 
-procedure TDataModule1.DataModuleDestroy(Sender: TObject);
+procedure TdmRules.DataModuleDestroy(Sender: TObject);
 begin
   Self.SaveCFGToINI;
 end;
 
-procedure TDataModule1.DSServerClass1GetClass(DSServerClass: TDSServerClass; var PersistentClass: TPersistentClass);
+procedure TdmRules.DSServerClass1GetClass(DSServerClass: TDSServerClass; var PersistentClass: TPersistentClass);
 begin
-  PersistentClass := TStopBus;
+  PersistentClass := TEstabelecimentos;
 end;
 
-function TDataModule1.GetGoogleAPIKey: string;
+function TdmRules.GetGoogleAPIKey: string;
 begin
   Result := Self.RESTClient1.Params.ParameterByName('key').Value;
 end;
 
-function TDataModule1.GetMap: TStringStream;
+function TdmRules.GetMap: TStringStream;
 begin
   Self.RESTRequest1.Execute;
 
@@ -135,50 +118,7 @@ begin
   Result.Seek(0, 0);
 end;
 
-function TDataModule1.GetNearbyBusStop(const ALine: string): TStringStream;
-const
-  MARKERS = 'color:green|%s,%s;color:red|%g,%g';
-var
-  oQuery      : TQueryEPTC;
-  aCoordinates: TArray<string>;
-  sCoordinates: string;
-begin
-  oQuery := TQueryEPTC.Create(Self.FRedisHost, Self.FRedisPort);
-  try
-    aCoordinates := oQuery.NearbyBusStop(ALine, Self.FDelphiSquadLat, Self.FDelphiSquadLng);
-    sCoordinates := Format(MARKERS, [aCoordinates[0], aCoordinates[1], Self.FDelphiSquadLat, Self.FDelphiSquadLng]);
-
-    Self.RESTRequest2.Params.ParameterByName('markers').Value := sCoordinates;
-    Self.RESTRequest2.Execute;
-
-    Result := TStringStream.Create;
-    Result.WriteData(Self.RESTResponse2.RawBytes, Self.RESTResponse2.ContentLength);
-    Result.Seek(0, 0);
-  finally
-    oQuery.Free;
-  end;
-end;
-
-function TDataModule1.LoadEPTC(ALog: TProcessLine): ITask;
-var
-  maEPTCLoad: TProc;
-begin
-  maEPTCLoad := procedure
-    var
-      oLoader: TLoadEPTC;
-    begin
-      oLoader := TLoadEPTC.Create(ALog);
-      try
-        oLoader.Work(Self.FRedisHost, Self.FRedisPort);
-      finally
-        oLoader.Free;
-      end;
-    end;
-
-  Result := TTask.Run(maEPTCLoad);
-end;
-
-procedure TDataModule1.LoadCFGFromINI;
+procedure TdmRules.LoadCFGFromINI;
 var
   oINI: TIniFile;
 begin
@@ -191,7 +131,69 @@ begin
   end;
 end;
 
-procedure TDataModule1.SaveCFGToINI;
+procedure TdmRules.LoadDataSet;
+type
+  TData = record
+    UUID: string[36];
+    Estabelecimento: string[255];
+    Latitude: Extended;
+    Longitude: Extended;
+    Endereco: string[255];
+  end;
+var
+  oRedis   : IRedisClient;
+  hFile    : TextFile;
+  slFields : TStringList;
+  sFileName: string;
+  sLine    : string;
+  rData    : TData;
+begin
+  sFileName := '.\dados.csv';
+
+  slFields                 := TStringList.Create;
+  slFields.StrictDelimiter := True;
+  slFields.Delimiter       := ';';
+  slFields.QuoteChar       := '"';
+
+  try
+    try
+      oRedis := TRedisClient.Create(Self.FRedisHost, Self.FRedisPort);
+      oRedis.Connect;
+      oRedis.FLUSHDB;
+
+      AssignFile(hFile, sFileName);
+      Reset(hFile);
+      while not Eof(hFile) do
+      begin
+        Readln(hFile, sLine);
+        if sLine = EmptyStr then
+        begin
+          Break;
+        end;
+
+        slFields.DelimitedText := sLine;
+
+        rData.UUID            := ShortString(slFields[0]);
+        rData.Estabelecimento := ShortString(slFields[1]);
+        rData.Endereco        := ShortString(slFields[2]);
+        rData.Latitude        := StrToFloat(slFields[3].Replace(',', '.'));
+        rData.Longitude       := StrToFloat(slFields[4].Replace(',', '.'));
+
+        oRedis.GEOADD('EVENTO:PASSAPORTE:2019#', rData.Latitude, rData.Longitude, string(rData.UUID))
+      end;
+    except
+      on E: Exception do
+      begin
+        raise;
+      end;
+    end;
+  finally
+    CloseFile(hFile);
+    slFields.Free;
+  end;
+end;
+
+procedure TdmRules.SaveCFGToINI;
 var
   oIniFile: TIniFile;
 begin
@@ -204,22 +206,27 @@ begin
   end;
 end;
 
-procedure TDataModule1.SetGoogleAPIKey(const Value: string);
+procedure TdmRules.SetGoogleAPIKey(const Value: string);
 begin
   Self.RESTClient1.Params.ParameterByName('key').Value := Value;
 end;
 
-procedure TDataModule1.SetRedisHostPort(const Value: string);
+procedure TdmRules.SetRedisHostPort(AValue: string);
 var
   slParts: TStringList;
   sHost  : string;
   sPort  : string;
 begin
+  if AValue = EmptyStr then
+  begin
+    AValue := 'localhost';
+  end;
+
   slParts := TStringList.Create;
   try
     slParts.Delimiter       := ':';
     slParts.StrictDelimiter := True;
-    slParts.DelimitedText   := Value;
+    slParts.DelimitedText   := AValue;
 
     sHost := slParts[0];
     if slParts.Count > 1 then
@@ -232,12 +239,12 @@ begin
     slParts.Free;
   end;
 
-  Self.FRedisHostPort := Value;
+  Self.FRedisHostPort := AValue;
   Self.FRedisHost     := sHost;
   Self.FRedisPort     := StrToInt(sPort);
 end;
 
-function TDataModule1.TestRedis: Boolean;
+function TdmRules.TestRedis: Boolean;
 var
   oRedis: IRedisClient;
 begin
@@ -254,11 +261,11 @@ begin
   end;
 end;
 
-function TDataModule1.WhereAreWe: TStringStream;
+function TdmRules.WhereAreWe: TStringStream;
 var
   sCoordinates: string;
 begin
-  sCoordinates := Format('%g,%g', [Self.FDelphiSquadLat, Self.FDelphiSquadLng]);
+  sCoordinates := Format('%g,%g', [Self.FEventoPassaporteLat, Self.FEventoPassaporteLng]);
 
   Self.RESTRequest2.Params.ParameterByName('markers').Value := Format('color:red|%s', [sCoordinates]);
 
@@ -269,48 +276,43 @@ begin
   Result.Seek(0, 0);
 end;
 
-{ TStopBus }
+{ TEstabelecimentos }
 
-function TStopBus.BusHunter(const ALine: string; const ALatitude, ALongitude: string): TJSONObject;
-var
-  oQuery : TQueryEPTC;
-  aBuffer: TArray<string>;
+function TEstabelecimentos.OlaMundo: string;
 begin
-  oQuery := TQueryEPTC.Create(DataModule1.FRedisHost, DataModule1.FRedisPort);
-  try
-    aBuffer := oQuery.NearbyBusStop(ALine, StrToFloat(ALatitude), StrToFloat(ALongitude));
-
-    Result := TJSONObject.Create;
-    Result.AddPair('lat', aBuffer[0]);
-    Result.AddPair('lng', aBuffer[1]);
-  finally
-    oQuery.Free;
-  end;
+  Result := 'Olá Mundo!';
 end;
 
-function TStopBus.BusList: TJSONArray;
+function TEstabelecimentos.OndeVamos(const ALatitude, ALongitude: string): TJSONArray;
+const
+  KEY_NAME = 'EVENTO:PASSAPORTE:2019#';
 var
-  oQuery : TQueryEPTC;
-  aBuffer: TArray<string>;
-  sItem  : string;
+  oRedis      : IRedisClient;
+  aResultItems: TRedisArray;
+  aResultCoord: TRedisMatrix;
+  oItem       : TJSONObject;
+  sUUID       : string;
 begin
-  oQuery := TQueryEPTC.Create(DataModule1.FRedisHost, DataModule1.FRedisPort);
-  try
-    aBuffer := oQuery.BusList;
+  oRedis := TRedisClient.Create(dmRules.FRedisHost, dmRules.FRedisPort);
+  oRedis.Connect;
 
-    Result := TJSONArray.Create;
-    for sItem in aBuffer do
+  aResultItems := oRedis.GEORADIUS(KEY_NAME, StrToFloat(ALongitude), StrToFloat(ALatitude), 3000, TRedisGeoUnit.Meters, TRedisSorting.Asc, -1);
+
+  Result := TJSONArray.Create;
+  if not aResultItems.IsNull then
+  begin
+    for sUUID in aResultItems.Value do
     begin
-      Result.Add(sItem);
-    end;
-  finally
-    oQuery.Free;
-  end;
-end;
+      aResultCoord := oRedis.GEOPOS(KEY_NAME, [sUUID]);
 
-function TStopBus.HelloWorld: string;
-begin
-  Result := 'Olá mundo!';
+      oItem := TJSONObject.Create;
+      oItem.AddPair('lat', TJSONNumber.Create(aResultCoord.Value[0].Value[0]));
+      oItem.AddPair('lng', TJSONNumber.Create(aResultCoord.Value[0].Value[1]));
+      oItem.AddPair('name', sUUID);
+
+      Result.Add(oItem);
+    end;
+  end;
 end;
 
 end.
