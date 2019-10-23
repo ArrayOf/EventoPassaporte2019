@@ -1,0 +1,22 @@
+inherited MainForm_NmXhdpiPh: TMainForm_NmXhdpiPh
+  ClientHeight = 615
+  ClientWidth = 400
+  DesignerMasterStyle = 0
+  inherited Header: TToolBar
+    Size.Width = 400.000000000000000000
+    inherited HeaderLabel: TLabel
+      Size.Width = 400.000000000000000000
+    end
+  end
+  inherited Footer: TToolBar
+    Position.Y = 567.000000000000000000
+    Size.Width = 400.000000000000000000
+    inherited FooterLabel: TLabel
+      Size.Width = 400.000000000000000000
+    end
+  end
+  inherited MapView: TMapView
+    Size.Width = 400.000000000000000000
+    Size.Height = 519.000000000000000000
+  end
+end
