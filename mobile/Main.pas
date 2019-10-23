@@ -139,31 +139,43 @@ var
 begin
 
   try
-    FooterLabel.Text := 'Buscando Estabelecimentos...';
+    TThread.Synchronize(TThread.CurrentThread,
+      procedure()
+      begin
+        FooterLabel.Text := 'Buscando Estabelecimentos...';
+      end);
 
     RESTRequest.Method := TRESTRequestMethod.rmGET;
     RESTRequest.Params.ParameterByName('lat').Value :=
-      //fCoordinate.Latitude.ToString.Replace(',', '.');
+    // fCoordinate.Latitude.ToString.Replace(',', '.');
       '-23.5708384';
     RESTRequest.Params.ParameterByName('lng').Value :=
-      //fCoordinate.Longitude.ToString.Replace(',', '.');
+    // fCoordinate.Longitude.ToString.Replace(',', '.');
       '-46.6576912';
-
-    FooterLabel.Text = RESTRequest.FullResource
 
     RESTRequest.Execute;
     oResponse := RESTRequest.Response.JSONValue as TJSONObject;
     oPoints := oResponse.GetValue('result') as TJSONArray;
+    oPoints := oPoints.Items[0] as TJSONArray;
 
     // Limpando ECS anteriores
     for I := 0 to High(oPins) do
+    begin
+       TThread.Synchronize(TThread.CurrentThread,procedure()
+        begin
       oPins[I].Remove;
+        end);
+    end;
     SetLength(oPins, 0);
 
     if oPoints.Count > 1 then
     begin
       SetLength(oPins, oPoints.Count);
-      FooterLabel.Text := 'Estabelecimentos localizados...';
+      TThread.Synchronize(TThread.CurrentThread,
+        procedure()
+        begin
+          FooterLabel.Text := 'Estabelecimentos localizados...';
+        end);
 
       for I := 0 to oPoints.Count - 1 do
       begin
@@ -178,18 +190,28 @@ begin
         oMarker.Icon := ImageList1.Source.Items[1].MultiResBitmap.Items
           [0].Bitmap;
 
-        oECPin := MapView.AddMarker(oMarker);
-        oPins[I] := oECPin;
-
+        TThread.Synchronize(TThread.CurrentThread,
+          procedure()
+          begin
+            oECPin := MapView.AddMarker(oMarker);
+            oPins[I] := oECPin;
+          end);
       end;
-
-      MapView.Zoom := 25;
-      FooterLabel.Text := 'Estabelecimentos marcado';
+      TThread.Synchronize(TThread.CurrentThread,
+        procedure()
+        begin
+          FooterLabel.Text := 'Estabelecimentos marcado';
+        end);
     end
     else
     begin
-      FooterLabel.Text := 'Nenhum estabelecimento encontrado';
+      TThread.Synchronize(TThread.CurrentThread,
+        procedure()
+        begin
+          FooterLabel.Text := 'Nenhum estabelecimento encontrado';
+        end);
     end;
+    MapView.Zoom := 25;
 
   finally
     oResponse.Free;
