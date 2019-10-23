@@ -73,7 +73,7 @@ begin
       else
       begin
         LocationSensor.Active := False;
-        FooterLabel.Text := 'GPS n„o habilitado';
+        FooterLabel.Text := 'GPS n√£o habilitado';
       end;
     end)
 end;
@@ -98,7 +98,7 @@ begin
   if Assigned(fUserPin) then
     fUserPin.Remove;
 
-  oMarker := TMapMarkerDescriptor.Create(fCoordinate, 'Sua LocalizaÁ„o');
+  oMarker := TMapMarkerDescriptor.Create(fCoordinate, 'Sua Localiza√ß√£o');
   oMarker.Icon := ImageList1.Source.Items[0].MultiResBitmap.Items[0].Bitmap;
   fUserPin := MapView.AddMarker(oMarker);
   FooterLabel.Text := Format('Latitude: %s | Longitude: %s',
@@ -147,11 +147,11 @@ begin
 
     RESTRequest.Method := TRESTRequestMethod.rmGET;
     RESTRequest.Params.ParameterByName('lat').Value :=
-    // fCoordinate.Latitude.ToString.Replace(',', '.');
-      '-23.5708384';
+    fCoordinate.Latitude.ToString.Replace(',', '.');
+     // '-23.5708384';
     RESTRequest.Params.ParameterByName('lng').Value :=
-    // fCoordinate.Longitude.ToString.Replace(',', '.');
-      '-46.6576912';
+    fCoordinate.Longitude.ToString.Replace(',', '.');
+    //  '-46.6576912';
 
     RESTRequest.Execute;
     oResponse := RESTRequest.Response.JSONValue as TJSONObject;
